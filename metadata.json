@@ -4,5 +4,5 @@
   "uuid": "quickshutdownbutton@feelfree2useit.outlook.com",
   "url": "https://github.com/feelfree2useit/quickshutdownbutton",
   "settings-schema": "org.gnome.shell.extensions.quickshutdown",
-  "shell-version": ["48", "49"]
+  "shell-version": ["48", "49", "50"]
 }

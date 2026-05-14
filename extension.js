@@ -1,33 +1,29 @@
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as SystemActions from 'resource:///org/gnome/shell/misc/systemActions.js';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 export default class QuickShutdownButton extends Extension {
     enable() {
-        //to enable a settings dialog 
         this._settings = this.getSettings();
         this._actions = SystemActions.getDefault();
-        //the new button 
-        this._button = new St.Bin({
-            reactive: true,
-            can_focus: true,
-            track_hover: true
-        });
-        //icon for the button
+
+        // PanelMenu.Button au lieu de St.Bin — intégration correcte dans le panel
+        this._button = new PanelMenu.Button(0.0, this.metadata.name, true);
+
         this._icon = new St.Icon({
             icon_name: 'system-shutdown-symbolic',
             style_class: 'system-status-icon'
         });
-        this._button.set_child(this._icon);
+        this._button.add_child(this._icon);
 
-        // load css on start
         this._updateStyle();
+        this._settingsConn = this._settings.connect('changed::use-red-style',
+            () => this._updateStyle());
 
-        // update styling when settings are changed
-        this._settings.connect('changed::use-red-style', () => this._updateStyle());
-        this._button.connect('button-release-event', (actor, event) => {
+        this._button.connect('button-release-event', (_actor, event) => {
             if (event.get_button() === 1) {
                 this._actions.activatePowerOff();
                 return Clutter.EVENT_STOP;
@@ -35,23 +31,24 @@ export default class QuickShutdownButton extends Extension {
             return Clutter.EVENT_PROPAGATE;
         });
 
-        Main.panel._rightBox.add_child(this._button);
+        // Méthode officielle pour ajouter au panel
+        Main.panel.addToStatusArea(this.uuid, this._button, 0, 'right');
     }
 
     _updateStyle() {
         const useRed = this._settings.get_boolean('use-red-style');
-        
-        // set dynamic classes
-        if (useRed) {
-            this._button.style_class = 'panel-button quick-shutdown-button red-style';
-        } else {
-            this._button.style_class = 'panel-button quick-shutdown-button';
-        }
+        this._button.style_class = useRed
+            ? 'panel-button quick-shutdown-button red-style'
+            : 'panel-button quick-shutdown-button';
     }
 
     disable() {
+        if (this._settingsConn) {
+            this._settings?.disconnect(this._settingsConn);
+            this._settingsConn = null;
+        }
         this._button?.destroy();
-        this._icon?.destroy();
+        this._button = null;
         this._icon = null;
         this._settings = null;
         this._actions = null;
